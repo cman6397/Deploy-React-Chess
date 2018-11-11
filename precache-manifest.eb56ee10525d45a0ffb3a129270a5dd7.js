@@ -4,19 +4,19 @@ self.__precacheManifest = [
     "url": "/Deploy-React-Chess/static/js/runtime~main.7a7a641c.js"
   },
   {
-    "revision": "97efcfcf8697b4bcf319",
-    "url": "/Deploy-React-Chess/static/js/main.97efcfcf.chunk.js"
+    "revision": "1653929b4e56a91de23e",
+    "url": "/Deploy-React-Chess/static/js/main.1653929b.chunk.js"
   },
   {
     "revision": "0e2f6e3426355fb8a7d2",
     "url": "/Deploy-React-Chess/static/js/1.0e2f6e34.chunk.js"
   },
   {
-    "revision": "97efcfcf8697b4bcf319",
+    "revision": "1653929b4e56a91de23e",
     "url": "/Deploy-React-Chess/static/css/main.645bdf6f.chunk.css"
   },
   {
-    "revision": "1dbb3c01877fbe02ee238593c088e78e",
+    "revision": "89a8c8a8ca2e7df5313186e671bb5348",
     "url": "/Deploy-React-Chess/index.html"
   }
 ];
