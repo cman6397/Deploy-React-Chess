@@ -1,144 +1,270 @@
-import { engine_squares, normal_squares } from './ChessMoves';
 
-class Game {
-    constructor(player, squares) {
+import { legal_moves } from './EngineMoves';
+
+var piece_scores = { Pawn: 1, Knight: 3, Bishop: 3.3, Rook: 5, Queen: 9.5, King: 0 };
+var INFINITY = 10000;
+var CHECKMATE = 9000;
+
+/* king locations = [white king, black king]
+ * castle_state = [white kingside, white queenside, black kingside, black queenside] 1 for can castle 0 for cannot castle */
+class Position {
+    constructor(player, squares, king_locations, castle_state, material_balance, en_passant_square) {
         this.player = player;
         this.squares = squares;
-        this.king_locations = null;
+        this.king_locations = king_locations;
+        this.castle_state = castle_state;
+        this.material_balance = material_balance;
+        this.en_passant_square = en_passant_square;
+    }
+}
 
-        /*
-        Additional properties to move to game state
-        this.castling_state = castling_state;
-        this.en_passant_targets = en_passant_targets;
-        this.en_passant_targets = en_passant_targets;
-        this.attacked_squares = null;
-        this.pinned_pieces = null;
-        this.pinning_pieces = null;
-        */
+class Move {
+    constructor(start,end, en_passant, rook_start, rook_end, promotion_piece) {
+        this.start = start;
+        this.end = end;
+        this.en_passant_capture = en_passant;
+        this.rook_start = rook_start;
+        this.rook_end = rook_end;
+        this.promotion_piece = promotion_piece;
+    }
+}
+
+function make_move(position, move) {
+
+    let start = move.start
+    let end = move.end
+
+    /*Starting Rook Locations */
+    let wk_rook = 98;
+    let wq_rook = 91;
+    let bk_rook = 28;
+    let bq_rook = 21;
+
+    let player = position.player;
+
+    let squares = position.squares.slice();
+    let piece = JSON.parse(JSON.stringify(squares[start]));
+    let king_locations = position.king_locations.slice();
+    let castle_state = position.castle_state.slice();
+    let material_balance = position.material_balance;
+    let en_passant_square = null;
+
+    if (move.en_passant_capture !== null) {
+        squares[move.en_passant_capture] = null;
     }
 
-    set_king_locations() {
-        /*White King Location & Black King location*/
-        let wk_location = null;
-        let bk_location = null;
-        let squares = this.squares;
+    /* Pawn Just Moved Two */
+    if (piece.name === 'Pawn' && Math.abs(start - end) === 20) {
+        en_passant_square = start + (end - start) / 2;
+    }
 
-        for (var k = 0; k < squares.length; k++) {
-            let current_square = squares[k];
-            if (current_square !== null && current_square !== 'boundary') {
-                if (current_square.name === 'King') {
-                    if (current_square.player === 'white') {
-                        wk_location = k;
-                    }
-                    else {
-                        bk_location = k;
-                    }
-                }
+    /*Castling move*/
+    if (move.rook_start !== null) {
+        let rook = JSON.parse(JSON.stringify(squares[move.rook_start]));
+        squares[move.rook_start] = null;
+        squares[move.rook_end] = rook;
+        rook.has_moved = true;
+    }
+    /*Change King Location and Castling states*/
+    if (piece.name === 'King') {
+        if (piece.player === 'white') {
+            king_locations[0] = end
+            castle_state[0] = 0;
+            castle_state[1] = 0;
+        }
+        else {
+            king_locations[1] = end
+            castle_state[2] = 0;
+            castle_state[3] = 0;
+        }
+    }
+    /* Change castling states for first rook moves */
+    if (piece.name === 'Rook' && !piece.has_moved) {
+        if (start === wk_rook) {
+            castle_state[0] = 0;
+        }
+        else if (start === wq_rook) {
+            castle_state[1] = 0;
+        }
+        else if (start === bk_rook) {
+            castle_state[2] = 0;
+        }
+        else if (start === bq_rook) {
+            castle_state[3] = 0;
+        }
+    }
+    /* Change castling states for rook captures */
+    if (squares[end] !== null && squares[end].name === 'Rook') {
+        if (end === wk_rook) {
+            castle_state[0] = 0;
+        }
+        else if (end === wq_rook) {
+            castle_state[1] = 0;
+        }
+        else if (end === bk_rook) {
+            castle_state[2] = 0;
+        }
+        else if (end === bq_rook) {
+            castle_state[3] = 0;
+        }
+    }
+    /*Change material Balance */
+    if (material_balance !== null && squares[end] !== null) {
+        if (position.player === 'white') {
+            material_balance = material_balance + piece_scores[squares[end].name];
+        }
+        else {
+            material_balance = material_balance - piece_scores[squares[end].name];
+        }
+    }
+
+    /*Promotion */
+    if (move.promotion_piece !== null) {
+        piece = move.promotion_piece;
+        if (piece.player === 'white') {
+            material_balance = material_balance + piece_scores[piece.name] - 1;
+        }
+        else {
+            material_balance = material_balance - piece_scores[piece.name] + 1;
+        }
+    }
+
+    squares[start] = null;
+    squares[end] = piece;
+    piece.has_moved = true;
+
+    (player === 'white') ? player = 'black' : player = 'white';
+
+    return new Position(player, squares, king_locations, castle_state, material_balance, en_passant_square);
+}
+
+/* Breadth First Search.*/
+function breadth_search(depth, positions) {
+    if (depth === 0) {
+        return positions;
+    }
+    else {
+        let new_positions = [];
+        for (var j = 0; j < positions.length; j++) {
+            let current_position = positions[j];
+            let moves = legal_moves(current_position);
+
+            for (var i = 0; i < moves.length; i++) {
+                let current_move = moves[i];
+                let next_position = make_move(current_position, current_move)
+                new_positions.push(next_position);
             }
         }
-        this.king_locations = {'white': wk_location, 'black': bk_location};
+        return breadth_search(depth - 1, new_positions);
     }
+}
 
-    make_move(move) {
-        let start = move[0];
-        let end = move[1];
-        let piece = JSON.parse(JSON.stringify(move[2]));
-        let squares = this.squares;
-
-        console.log(squares[start])
-        squares[start] = null;
-        squares[end] = piece;
-
-        piece.has_moved = true;
-
-        if ('en_passant' in move[3]) {
-            let taken_location = move[3]['en_passant'];
-            squares[taken_location] = null;
+function alphabeta(position, depth, alpha, beta) {
+    if (depth === 0) {
+        return { value: position.material_balance, move: null};
+    }
+    let moves = legal_moves(position);
+    //Checkmate
+    if (moves.length === 0) {
+        if (position.player === 'white') {
+            return {value: -CHECKMATE, move: null};
         }
-        else if ('castle' in move[3]) {
-            let rook_moves = move[3]['castle'];
-            let rook = JSON.parse(JSON.stringify(rook_moves[2]));
-
-            squares[rook_moves[0]] = null;
-            squares[rook_moves[1]] = rook;
-            rook.has_moved = true;
+        else {
+            return {value: CHECKMATE, move: null};
         }
+    }
 
-        if (piece.name === 'King') {
-            this.king_locations[this.player] = end;
+    if (position.player === 'white') {
+        let value = -INFINITY;
+        let best_move = null;
+        for (var x = 0; x < moves.length; x ++) {
+            let current_move = moves[x];
+            let current_position = make_move(position, current_move);
+            value = Math.max(value, alphabeta_search(current_position, depth - 1, alpha, beta).value);
+            if (value > alpha) {
+                alpha = value;
+                best_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
         }
- 
-        (this.player === 'white') ? this.player = 'black' : this.player = 'white';
-        return squares;
+        return {value: value, move:best_move};
+    }
+    else {
+        let value = INFINITY;
+        let best_move = null;
+        for (var k = 0; k < moves.length; k ++) {
+            let current_move = moves[k];
+            let current_position = make_move(position, current_move);
+            value = Math.min(value, alphabeta_search(current_position, depth - 1, alpha, beta).value);
+            if (value < beta) {
+                beta = value;
+                best_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        return {value: value, move: best_move};
+    }
+}
+
+/*Give Max Depth and max search time*/
+function alphabeta_search(position, depth, alpha, beta, move, start_time, total_time, best_move, value) {
+    if (depth === 0) {
+        return { value: position.material_balance, move: best_move};
+    }
+    let moves = legal_moves(position);
+    //Checkmate
+    if (moves.length === 0) {
+        if (position.player === 'white') {
+            return {value: -CHECKMATE, move: best_move};
+        }
+        else {
+            return {value: CHECKMATE, move: best_move};
+        }
+    }
+    let elapsed_time = performance.now()-start_time;
+    if (elapsed_time > total_time) {
+        return {value: value, move:best_move};
     }
 
-    /*
-    set_castle_state() {
-        this.castling_state = {wk:1, wq:1, bk: 1, bq: 1};
+    if (position.player === 'white') {
+        let value = -INFINITY;
+        let best_move = move;
+        for (var x = 0; x < moves.length; x ++) {
+            let current_move = moves[x];
+            let current_position = make_move(position, current_move);
+            value = Math.max(value, alphabeta_search(current_position, depth - 1, alpha, beta, current_move, start_time, total_time, best_move, value).value);
+            if (value > alpha) {
+                alpha = value;
+                best_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        return {value: value, move:best_move};
     }
-    set_attacked_squares() {
-        Think about how to update attacked squares.  
-        this.attacked_squares = {w:attacked_squares,b:attacked_squares};
+    else {
+        let value = INFINITY;
+        let best_move = move;
+        for (var k = 0; k < moves.length; k ++) {
+            let current_move = moves[k];
+            let current_position = make_move(position, current_move);
+            value = Math.min(value, alphabeta_search(current_position, depth-1, alpha, beta, current_move, start_time, total_time, best_move, value).value);
+            if (value < beta) {
+                beta = value;
+                best_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        return {value: value, move: best_move};
     }
-    */
 }
 
 
-/* Engine Make move function for React board */
-function make_engine_move_react(squares64, move) {
-    let start = move[0];
-    let end = move[1];
-    let piece = JSON.parse(JSON.stringify(move[2]));
-    let squares = engine_squares(squares64)[0];
-
-    squares[start] = null;
-    squares[end] = piece;
-
-    piece.has_moved = true;
-
-    if ('en_passant' in move[3]){
-        let taken_location = move[3]['en_passant'];
-        squares[taken_location] = null;
-    }
-    else if ('castle' in move[3]){
-        let rook_moves = move[3]['castle'];
-        let rook = JSON.parse(JSON.stringify(rook_moves[2]));
-        
-        squares[rook_moves[0]] = null;
-        squares[rook_moves[1]] = rook;
-        rook.has_moved = true;
-    }
-    squares = normal_squares(squares);
-    return squares;
-}
-
-/* Engine Make move function for Engine*/
-function make_engine_move(squares120, move) {
-    let start = move[0];
-    let end = move[1];
-    let piece = JSON.parse(JSON.stringify(move[2]));
-    let squares = squares120;
-
-    squares[start] = null;
-    squares[end] = piece;
-
-    piece.has_moved = true;
-
-    if ('en_passant' in move[3]) {
-        let taken_location = move[3]['en_passant'];
-        squares[taken_location] = null;
-    }
-    else if ('castle' in move[3]) {
-        let rook_moves = move[3]['castle'];
-        let rook = JSON.parse(JSON.stringify(rook_moves[2]));
-
-        squares[rook_moves[0]] = null;
-        squares[rook_moves[1]] = rook;
-        rook.has_moved = true;
-    }
-    return squares;
-}
-
-
-
-export {Game, make_engine_move_react, make_engine_move}
+export {Move, Position, make_move, breadth_search, alphabeta_search}

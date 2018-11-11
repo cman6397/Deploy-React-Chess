@@ -4,27 +4,24 @@ import { DragDropContext } from 'react-dnd';
 import HTML5Backend from 'react-dnd-html5-backend';
 import ReactPiece from './DragPiece';
 import DropSquare from './DropSquare';
-import { initialize_board, make_move, Knight, Bishop, Rook, Queen } from './Pieces.js';
-import { legal_moves, is_legal } from './ChessMoves';
-import { make_engine_move_react } from './Engine';
-import { test } from './Tests';
+import { Knight, Bishop, Rook, Queen, initialize_engine_board} from './Pieces.js';
+import { legal_moves, is_legal, create_move} from './EngineMoves';
+import {normal_squares,coordinate_change, ParseFen} from './BoardFunctions';
+import { make_move, Position, alphabeta_search} from './Engine';
 
 class Chess extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      history: [{squares: initialize_board()}],
-      player: 'white',
+      history: [{ position: new Position('white', initialize_engine_board(), [95, 25], [1, 1, 1, 1], 0) }],
       drag_end: null,
       promotion:{class:'hidden',start: null, end: null, player: null},
       status:null,
-      test:test()
     }
   }
   reset() {
     this.setState({
-      history: [{squares: initialize_board()}],
-      player: 'white',
+      history: [{ position: new Position('white', initialize_engine_board(), [95, 25], [1, 1, 1, 1], 0)}],
       drag_end: null,
       promotion:{class:'hidden',start: null, end: null, player: null},
       status:null
@@ -32,44 +29,51 @@ class Chess extends Component {
   }
   back() {
     const history = this.state.history.slice();
-    let player = this.state.player;
-
     if (history.length === 1) {
       return;
     }
     history.pop();
-    (player === 'white') ? player = 'black' : player = 'white';
 
     this.setState({
       history: history,
-      player:player,
       status:null
     });
+    }
+
+  setup_fen(value) {
+      let position = ParseFen(value);
+      if (position !== 'FEN Error') {
+          this.setState({
+              history: [{ position: position }],
+              drag_end: null,
+              promotion: { class: 'hidden', start: null, end: null, player: null },
+              status: null
+          });
+      }
+      else {
+          alert('FEN ERROR');
+      }
   }
 
   engine_move() {
     const history = this.state.history.slice();
-    const squares = history[history.length - 1].squares.slice();
-    let player = this.state.player;
+    const position = history[history.length - 1].position;
 
-    let engine_moves = legal_moves(squares, player)
-    let possible_moves = engine_moves[0];
-
-    if (engine_moves[1] !== null){
-      this.setState({
-        status: engine_moves[1]
-      });
-      return;
+    //Time in milliseconds
+    let search_time = 1000;
+    let INFINITY = 10000;
+    let engine_move = alphabeta_search(position, 10, -INFINITY, INFINITY, null, performance.now(), search_time).move;
+  
+    if (engine_move === null) {
+        this.setState({
+            status: 'Game Over',
+        });
+        return;
     }
 
-    let move = possible_moves[Math.floor(Math.random() * possible_moves.length)][1];
-    let new_squares = make_engine_move_react(squares, move);
-
-    (player === 'white') ? player = 'black' : player = 'white';
-
+    let new_position = make_move(position, engine_move);
     this.setState({
-      history: history.concat([{squares: new_squares}]),
-      player:player
+      history: history.concat([{position: new_position}]),
     });
   }
 
@@ -79,64 +83,66 @@ class Chess extends Component {
 
   handle_drag_end(id) {
     const history = this.state.history.slice();
-    const squares = history[history.length - 1].squares.slice();
-    let drag_start = id;
-    let drag_end = this.state.drag_end;
-    let player = this.state.player;
-    let piece_copy = JSON.parse(JSON.stringify(squares[drag_start]));
+    const position = history[history.length - 1].position;
+
+    let drag_start = coordinate_change(id);
+    let drag_end = coordinate_change(this.state.drag_end);
+    let piece = position.squares[drag_start];
     /* promotions */
-    if ((drag_end < 8 || drag_end > 55) && piece_copy.name === 'Pawn'){
-      let promotion = {class:'promotion_container',start: drag_start, end: drag_end, player: player}
+    if ((drag_end <= 28 || drag_end >= 91) && piece.name === 'Pawn'){
+      let promotion = {class:'promotion_container',start: drag_start, end: drag_end, player: position.player}
       this.setState({promotion:promotion})
       return;
     }
-    this.change_states(history,squares,player,drag_start,drag_end,piece_copy)
+    this.change_states(history, position, drag_start, drag_end, null);
   };
 
   handle_promotion(piece) {
     const history = this.state.history.slice();
-    const squares = history[history.length - 1].squares.slice();
+    const position = history[history.length - 1].position;
     const promotion = this.state.promotion;
 
     let start = promotion['start'];
     let end = promotion['end'];
-    let player = promotion['player'];
 
-    this.change_states(history,squares,player,start,end,piece)
+    this.change_states(history, position, start, end, piece)
 
     this.setState({
       promotion:{class:'hidden',start: null, end: null, player: null}
     });
   }
 
-  change_states(history, squares, player, start, end, piece) {
-    let possible_moves = legal_moves(squares, player)[0];
-    make_move(start, end, squares, piece);
-
-    if (is_legal(squares, possible_moves)){
-      (player === 'white') ? player = 'black' : player = 'white';
-
-      let status = legal_moves(squares, player)[1];
-
+  change_states(history, position, start, end, promotion_piece) {
+      let possible_moves = legal_moves(position);
+      let move = create_move(start, end, position, promotion_piece);
+      if (is_legal(move, possible_moves)) {
+        let new_position = make_move(position, move);
+        let new_moves = legal_moves(new_position);
+    
+        if (new_moves.length === 0) {
+            this.setState({
+              status: 'Game Over',
+            });
+        }
+      
       this.setState({
-        history: history.concat([{squares: squares}]),
+        history: history.concat([{position: new_position}]),
         drag_end: null,
-        player: player,
-        status: status
       });
     }
   }
 
-  render() {
-    let boards = this.state.history;
-    let current_squares = boards[boards.length-1].squares;
-    let player = this.state.player;
+    render() {
+    let history= this.state.history;
+    let current_position = history[history.length - 1].position
+    let current_squares = normal_squares(current_position.squares);
+    let player = current_position.player;
     let promotion_class = this.state.promotion['class'];
     let status = this.state.status;
 
     return (
     <div className = 'game_container'>
-    <div className = 'status'> {status} </div>
+      <div className='status'> {status} </div>
       <Buttons 
       back = {() => this.back()}
       reset = {() => this.reset()}
@@ -145,14 +151,15 @@ class Chess extends Component {
       <div className = 'board_container' >
         <Board 
           squares = {current_squares}
-          onDragStart = {(id) => this.drag_start(id)}
-          onDragEnd = {(id) => this.drag_end(id)}
           onDrop = {(id) => this.drop(id)}
-          player = {this.state.player}
+          player = {player}
           handle_drop={(id) => this.handle_drop(id)}
           handle_drag_end = {(id) => this.handle_drag_end(id)}
         />
       </div>
+      <FenPosition
+      setup_fen={(value) => this.setup_fen(value)}
+      />
       <Promotion
         className = {promotion_class}
         player = {player}
@@ -245,7 +252,7 @@ class Square extends React.Component {
 
 function Buttons(props) {
   return (
-    <div>
+   <div className = 'button_container'>
       <button 
       className = "reset_button" 
       onClick={() => props.reset()} > Reset
@@ -262,14 +269,41 @@ function Buttons(props) {
   );
 } 
 
+class FenPosition extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { value: '' };
+    }
+
+    handleChange(event) {
+        this.setState({ value: event.target.value });
+    }
+
+    submit(event) {
+        event.preventDefault();
+        this.props.setup_fen(this.state.value);
+    }
+
+    render() {
+    return (
+        <form onSubmit={(event) => this.submit(event)} className='fen_input'>
+            <label>
+                FEN String: &nbsp;
+              <input type="text" className = 'input_box' value={this.state.value} onChange={(event) => this.handleChange(event)} />
+            </label>
+            <input type="submit" className = 'input_button' value="Set Position" />
+        </form>
+    );
+    }
+
+}
+
 class Promotion extends React.Component {
   render(){
     let knight_piece = new Knight(this.props.player);
     let bishop_piece = new Bishop(this.props.player);
     let rook_piece = new Rook(this.props.player);
     let queen_piece = new Queen(this.props.player);
-    /*chance for crazy castling circumstance without is true*/
-    rook_piece.has_moved = true;
 
     return (
       <div className = {this.props.className}>

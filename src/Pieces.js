@@ -1,4 +1,4 @@
-import { engine_squares } from './ChessMoves';
+import { engine_squares} from './EngineMoves';
 
 class Piece {
   constructor(player, img_url, name){
@@ -70,51 +70,7 @@ class King extends Piece {
         super(player, url, 'King')
     }
 }
-/*This move generation function is for the UI and it interprets the mouse moves not egine moves */
-function make_move(start, end, squares, piece) {
 
-    /*For En passant*/
-    if (piece.name === 'Pawn') {
-        if (Math.abs(start - end) === 16) {
-            piece.just_moved_two = true;
-				}
-        else {
-            piece.just_moved_two = false;
-            /* En Passant.  Remove pawn to the direct left or right when en passant criteria is satisfied.*/
-            if (Math.abs(start - end) === 7 && squares[end] === null) {
-                if (piece.player === 'white') {
-                    squares[start + 1] = null;
-                }
-                else {
-                    squares[start - 1] = null;
-                }
-            }
-            else if (Math.abs(start - end) === 9 && squares[end] === null) {
-                if (piece.player === 'white') {
-                    squares[start - 1] = null;
-                }
-                else {
-                    squares[start + 1] = null;
-                }
-            }
-        }
-    }
-    /* For Castling */
-    if (piece.name === 'King') {
-        /* kingside */
-        if ((end - start) === 2) {
-            squares[start + 1] = squares[end + 1];
-            squares[end + 1] = null
-        }
-        else if ((start - end) === 2) {
-            squares[start - 1] = squares[end - 2];
-            squares[end - 2] = null
-        }
-    }
-    squares[start] = null;
-    squares[end] = piece;
-    piece.has_moved = true;
-}
 
 function initialize_board() {
     var board = Array(64).fill(null)
@@ -142,8 +98,10 @@ function initialize_board() {
 
 function initialize_engine_board() {
     let board = initialize_board();
-    let engine_board = engine_squares(board)[0];
+    let engine_board = engine_squares(board);
     return engine_board
 }
 
-export {Pawn,Rook,Knight,Bishop,King,Queen, initialize_board, initialize_engine_board, make_move}
+
+
+export {Pawn,Rook,Knight,Bishop,King,Queen, initialize_board, initialize_engine_board}
