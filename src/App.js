@@ -4,10 +4,13 @@ import { DragDropContext } from 'react-dnd';
 import HTML5Backend from 'react-dnd-html5-backend';
 import ReactPiece from './DragPiece';
 import DropSquare from './DropSquare';
-import { Knight, Bishop, Rook, Queen, initialize_engine_board} from './Pieces.js';
-import { legal_moves, is_legal, create_move} from './EngineMoves';
-import {normal_squares,coordinate_change, ParseFen} from './BoardFunctions';
-import { make_move, Position, alphabeta_search} from './Engine';
+import { Knight, Bishop, Rook, Queen} from './Pieces';
+import { legal_moves, is_legal} from './EngineMoves';
+import {normal_squares,coordinate_change, ParseFen, initialize_engine_board} from './BoardFunctions';
+import { make_move, Position, create_move, Game} from './Game';
+import { alphabeta_search} from './Search';
+//import { game_test, perft_test } from './Tests';
+import { train } from './Evaluation.js';
 
 class Chess extends Component {
   constructor(props) {
@@ -19,6 +22,18 @@ class Chess extends Component {
       status:null,
     }
   }
+  train() {
+    const history = this.state.history.slice();
+    const position = history[history.length - 1].position;
+
+    //perft_test(position,4);
+    
+    let chess_game = new Game(position, history);
+    train(chess_game);
+    
+
+  };
+
   reset() {
     this.setState({
       history: [{ position: new Position('white', initialize_engine_board(), [95, 25], [1, 1, 1, 1], 0)}],
@@ -58,22 +73,22 @@ class Chess extends Component {
   engine_move() {
     const history = this.state.history.slice();
     const position = history[history.length - 1].position;
-
     //Time in milliseconds
     let search_time = 1000;
-    let INFINITY = 10000;
-    let engine_move = alphabeta_search(position, 10, -INFINITY, INFINITY, null, performance.now(), search_time).move;
-  
-    if (engine_move === null) {
+    let engine_move = alphabeta_search(position,10,search_time);
+    console.log(engine_move.value)
+
+    if (engine_move.move === null) {
         this.setState({
             status: 'Game Over',
         });
         return;
     }
 
-    let new_position = make_move(position, engine_move);
+    let new_position = make_move(position, engine_move.move);
     this.setState({
       history: history.concat([{position: new_position}]),
+      engine_turn: false
     });
   }
 
@@ -115,20 +130,19 @@ class Chess extends Component {
   change_states(history, position, start, end, promotion_piece) {
       let possible_moves = legal_moves(position);
       let move = create_move(start, end, position, promotion_piece);
+      let status = null;
       if (is_legal(move, possible_moves)) {
         let new_position = make_move(position, move);
         let new_moves = legal_moves(new_position);
     
         if (new_moves.length === 0) {
-            this.setState({
-              status: 'Game Over',
-            });
+            status = 'Game Over'
         }
-      
-      this.setState({
-        history: history.concat([{position: new_position}]),
-        drag_end: null,
-      });
+        this.setState({
+          history: history.concat([{position: new_position}]),
+          drag_end: null,
+          status: status,
+        });
     }
   }
 
@@ -138,15 +152,15 @@ class Chess extends Component {
     let current_squares = normal_squares(current_position.squares);
     let player = current_position.player;
     let promotion_class = this.state.promotion['class'];
-    let status = this.state.status;
+    //let status = this.state.status;
 
     return (
     <div className = 'game_container'>
-      <div className='status'> {status} </div>
       <Buttons 
       back = {() => this.back()}
       reset = {() => this.reset()}
       engine_move = {() => this.engine_move()}
+      train = {() => this.train()}
       />
       <div className = 'board_container' >
         <Board 
@@ -254,15 +268,15 @@ function Buttons(props) {
   return (
    <div className = 'button_container'>
       <button 
-      className = "reset_button" 
+      className = "button_element" 
       onClick={() => props.reset()} > Reset
       </button>
       <button 
-      className = "back_button" 
+      className = "button_element"  
       onClick={() => props.back()} > Back 
       </button>
       <button 
-      className = "engine_button" 
+      className = "button_element" 
       onClick={() => props.engine_move()} > Engine Move
       </button>
     </div>
