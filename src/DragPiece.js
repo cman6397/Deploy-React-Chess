@@ -33,11 +33,12 @@ class ReactPiece extends React.Component {
     img.src = this.props.url;
     img.onload = () => this.props.connectDragPreview(img);
   }
+
   render() {
     var url = this.props.url
     const { connectDragSource, isDragging } = this.props;
     return connectDragSource(
-    <div className = "piece_container">
+    <div className = "piece_container" onClick = {() => this.props.handle_click_start()}>
       <img src={url} alt ='' className = "react_piece" style={{
         opacity: 1,
         cursor: isDragging ? 'grabbing' : 'grab'

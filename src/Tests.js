@@ -1,7 +1,8 @@
-import { initialize_engine_board, King, Rook, Pawn, Knight, Bishop, Queen } from './Pieces.js';
-import { make_move, Position,breadth_search, alphabeta_search } from './Engine.js';
+import { King, Rook, Pawn, Knight, Bishop, Queen } from './Pieces';
+import { make_move, Position, Game} from './Game';
+import { breadth_search, alphabeta_search } from './Search';
 import { legal_moves, engine_squares} from './EngineMoves';
-import { ParseFen, evaluate_material } from './BoardFunctions';
+import { ParseFen, evaluate_material, initialize_engine_board } from './BoardFunctions';
 
 var perft_table = [
     [6,'8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1',0,0,0,0,0, 1015133],
@@ -136,7 +137,7 @@ var perft_table = [
     
 function perft_testing(){
     let perft_passed = true;
-    for (var x = 0; x < perft_table.length; x++) {
+    for (var x = 0; x < 3; x++) {
         let depth = perft_table[x][0];
         let current_fen = perft_table[x][1];
         let current_position = ParseFen(current_fen);
@@ -153,6 +154,21 @@ function perft_testing(){
     }
     if (perft_passed) {
         console.log('PASSED ALL')
+    }
+}
+
+function game_test(position) {
+    let initial_position = new Position('white', initialize_engine_board(), [95, 25], [1,1,1,1], 0);
+    let chess_game = new Game(initial_position, [initial_position]);
+
+    if (position !== null) {
+        chess_game = new Game(position, [position]);
+    }
+    while (chess_game.history.length < 50) {
+        let moves = chess_game.moves();
+        let move = moves[Math.floor(Math.random() * moves.length)]
+        chess_game.make_move(move);
+        console.log(move)
     }
 }
 
@@ -469,10 +485,10 @@ function perft_search(chess, depth) {
 
 function perft_test(position, depth) {
     if (position === null) {
-        position = ParseFen('3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1');
+        position = ParseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     }
     if (depth === null) {
-        depth = 1;
+        depth = 3;
     }
     let t1 = performance.now();
     /*
@@ -482,7 +498,7 @@ function perft_test(position, depth) {
         console.log(moves[x], perft(1, new_position));
     }
     */
-    let position_count =perft(6, position);
+    let position_count =perft(depth, position);
     let t2 = performance.now();
     /*
 
@@ -544,4 +560,4 @@ function perft(depth, position) {
 }
 
 
-export { test, perft_test, ParseFen, perft_testing }
+export { test, perft_test, ParseFen, perft_testing, game_test }
