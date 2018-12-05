@@ -1,13 +1,101 @@
 import { legal_moves } from "./EngineMoves";
-
+import { initialize_engine_board} from "./BoardFunctions";
 
 var piece_scores = { Pawn: 1, Knight: 3, Bishop: 3.3, Rook: 5, Queen: 9.5, King: 0 };
 
+var square_values = {};
+square_values['Pawn'] =
+   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0.02, 0.02, 0.02, 0.02, 0, 0, 0,
+    0, 0, 0, 0.02, 0.05, 0.05, 0.02, 0, 0, 0,
+    0, 0, 0, 0.02, 0.05, 0.05, 0.02, 0, 0, 0,
+    0, 0, 0, 0.02, 0.02, 0.02, 0.02, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+square_values['Rook'] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, -0.01, 0, 0.01, 0.02, 0.02, 0.01, 0, -0.01, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, -0.01, 0, 0.01, 0.02, 0.02, 0.01, -0.01, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+square_values['Knight'] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, 0,
+    0,-0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, -0.01, 0,
+    0, -0.01, 0, 0.01, 0.01, 0.01, 0.01, 0, -0.01, 0,
+    0, -0.01, 0, 0.01, 0.02, 0.02, 0.01, 0, -0.01, 0,
+    0, -0.01, 0, 0.01, 0.02, 0.02, 0.01, 0, -0.01, 0,
+    0, -0.01, 0, 0.01, 0.02, 0.02, 0.01, 0, -0.01, 0,
+    0, -0.01, 0, 0.01, 0.01, 0.01, 0.01, 0, -0.01, 0,
+    0, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, -0.01, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+square_values['Bishop'] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+square_values['Queen'] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+square_values['King'] =
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0.02, 0.02, 0, 0, 0, 0, 0.02, 0.02, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0.02, 0.02, 0, 0, 0, 0, 0.02, 0.02, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+
 class Game {
-    constructor(position, history, moves) {
+    constructor(position, history, moves, position_key) {
         this.position = position;
         this.history = history;
         this.moves = moves; 
+        this.position_keys = {[position_key]: position};
+        this.position_key = position_key;
     }
     moves() {
         return legal_moves(this.position);
@@ -19,6 +107,11 @@ class Game {
         this.position = new_position;
         this.history = history.concat(new_position);
         this.moves = moves.concat(move);
+    }
+    take_move() {
+        this.history.pop();
+        this.moves.pop();
+        this.position = this.history[this.history.length - 1]
     }
 }
 
@@ -146,6 +239,14 @@ function make_move(position, move) {
         }
     }
 
+    let location_score = square_values[piece.name][end] - square_values[piece.name][start];
+    if (piece.player === 'white') {
+        material_balance = material_balance + location_score;
+    }
+    else {
+        material_balance = material_balance - location_score;
+    }
+
     squares[start] = null;
     squares[end] = piece;
     piece.has_moved = true;
@@ -199,4 +300,11 @@ function create_move(start, end, position, promotion_piece) {
     return new Move(start, end, en_passant, rook_start, rook_end, promotion_piece)
 }
 
-export {Move, Position, make_move, create_move, Game}
+function new_game() {
+    let position = new Position('white', initialize_engine_board(), [95, 25], [1, 1, 1, 1], 0);
+    let history = [position];
+    let moves = [];
+    return new Game(position, history, moves)
+}
+
+export {Move, Position, make_move, create_move, Game, new_game}

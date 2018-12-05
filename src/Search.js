@@ -9,6 +9,7 @@ var start_time = null;
 var time_limit = null;
 var depth_searched = null;
 var time_cutoff = false;
+var total_positions = null;
 
 function set_variables(max_time) {
     start_time = performance.now();
@@ -16,13 +17,15 @@ function set_variables(max_time) {
     time_limit = max_time;
     depth_searched = 0;
     time_cutoff = false;
+    total_positions = 0;
 }
 
 function alphabeta(position, depth, alpha, beta) {
     if (depth === 0) {
-        return { value: position.material_balance, move: null};
+        return { value: score_position(position), move: null};
     }
     let moves = legal_moves(position);
+    total_positions = total_positions + moves.length;
     //Checkmate
     if (moves.length === 0) {
         if (position.player === 'white') {
@@ -82,6 +85,74 @@ function alphabeta(position, depth, alpha, beta) {
         return {value: value, move: top_move};
     }
 }
+// Alpha Beta using Game Object
+function game_alphabeta(game, depth, alpha, beta) {
+    let position = game.position;
+    if (depth === 0) {
+        return { value: score_position(position), move: null};
+    }
+    let moves = legal_moves(position);
+    //Checkmate
+    if (moves.length === 0) {
+        if (position.player === 'white') {
+            return {value: -CHECKMATE, move: null};
+        }
+        else {
+            return {value: CHECKMATE, move: null};
+        }
+    }
+    if (time_cutoff) {
+        return {value: 0, move: null};
+    }
+
+    if (position.player === 'white') {
+        let value = -INFINITY;
+        let top_move = null;
+        for (var x = 0; x < moves.length; x ++) {
+            let current_move = moves[x];
+            game.make_move(current_move);
+            value = Math.max(value, game_alphabeta(game, depth - 1, alpha, beta).value);
+            game.take_move();
+            if (value > alpha) {
+                alpha = value;
+                //best_moves[] = best_moves[depth].concat(current_move);
+                top_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        if ((performance.now() - start_time) >= time_limit ) {
+            time_cutoff = true;
+            return {value:0,move:null};
+        }
+        return {value: value, move:top_move};
+    }
+    else {
+        let value = INFINITY;
+        let top_move = null;
+        for (var k = 0; k < moves.length; k ++) {
+            let current_move = moves[k];
+            game.make_move(current_move);
+            value = Math.min(value, game_alphabeta(game, depth - 1, alpha, beta).value);
+            game.take_move();
+            if (value < beta) {
+                beta = value;
+                //best_moves[depth] = best_moves[depth].concat(current_move);
+                top_move = current_move;
+            }
+            if (alpha >= beta) {
+                break;
+            }
+        }
+        if ((performance.now() - start_time) >= time_limit ) {
+            time_cutoff = true;
+            return {value:0,move:null};
+
+        }
+        return {value: value, move: top_move};
+    }
+}
 
 /*Give Max Depth and max search time*/
 function alphabeta_search(position, max_depth, max_time) {
@@ -89,6 +160,22 @@ function alphabeta_search(position, max_depth, max_time) {
     let value_move = {value: 0, move: null};
     for (var depth = 1; depth <= max_depth; depth++) {
         let search_move = alphabeta(position,depth,-INFINITY, INFINITY);
+
+        if (search_move.move !== null) {
+            value_move = search_move
+            depth_searched = depth
+        }
+    }
+    console.log("depth searched:", depth_searched, "total positions:", total_positions)
+    return value_move;
+}
+
+/*Give Max Depth and max search time*/
+function game_alphabeta_search(game, max_depth, max_time) {
+    set_variables(max_time);
+    let value_move = {value: 0, move: null};
+    for (var depth = 1; depth <= max_depth; depth++) {
+        let search_move = game_alphabeta(game,depth,-INFINITY, INFINITY);
 
         if (search_move.move !== null) {
             value_move = search_move
@@ -120,4 +207,9 @@ function breadth_search(depth, positions) {
     }
 }
 
-export {alphabeta_search, alphabeta, breadth_search}
+function score_position(position) {
+    let score = position.material_balance;
+    return score;
+}
+
+export {alphabeta_search, alphabeta, breadth_search, game_alphabeta_search}
