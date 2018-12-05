@@ -1,13 +1,13 @@
 {
-  "main.css": "/Deploy-React-Chess/static/css/main.ae9ba339.chunk.css",
-  "main.js": "/Deploy-React-Chess/static/js/main.aa026d1f.chunk.js",
-  "main.js.map": "/Deploy-React-Chess/static/js/main.aa026d1f.chunk.js.map",
-  "static/js/1.0e2f6e34.chunk.js": "/Deploy-React-Chess/static/js/1.0e2f6e34.chunk.js",
-  "static/js/1.0e2f6e34.chunk.js.map": "/Deploy-React-Chess/static/js/1.0e2f6e34.chunk.js.map",
+  "main.css": "/Deploy-React-Chess/static/css/main.704d04f8.chunk.css",
+  "main.js": "/Deploy-React-Chess/static/js/main.7a38227c.chunk.js",
+  "main.js.map": "/Deploy-React-Chess/static/js/main.7a38227c.chunk.js.map",
+  "static/js/1.6ebb7bab.chunk.js": "/Deploy-React-Chess/static/js/1.6ebb7bab.chunk.js",
+  "static/js/1.6ebb7bab.chunk.js.map": "/Deploy-React-Chess/static/js/1.6ebb7bab.chunk.js.map",
   "runtime~main.js": "/Deploy-React-Chess/static/js/runtime~main.7a7a641c.js",
   "runtime~main.js.map": "/Deploy-React-Chess/static/js/runtime~main.7a7a641c.js.map",
-  "static/css/main.ae9ba339.chunk.css.map": "/Deploy-React-Chess/static/css/main.ae9ba339.chunk.css.map",
+  "static/css/main.704d04f8.chunk.css.map": "/Deploy-React-Chess/static/css/main.704d04f8.chunk.css.map",
   "index.html": "/Deploy-React-Chess/index.html",
-  "precache-manifest.6644dfc04da63515968d8484eede1e74.js": "/Deploy-React-Chess/precache-manifest.6644dfc04da63515968d8484eede1e74.js",
+  "precache-manifest.32c920b2e70f42dcdc4080ea3bb75b4d.js": "/Deploy-React-Chess/precache-manifest.32c920b2e70f42dcdc4080ea3bb75b4d.js",
   "service-worker.js": "/Deploy-React-Chess/service-worker.js"
 }
