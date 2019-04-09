@@ -39,8 +39,10 @@ class Chess extends Component {
   }
   back() {
     const game = this.state.game
+    if (game.position == null){
+      return;
+    }
     game.take_move();
-
     this.setState({
       game: game,
       status:null
