@@ -39,7 +39,7 @@ class Chess extends Component {
   }
   back() {
     const game = this.state.game
-    if (game.position == null){
+    if (game.history.length <= 1){
       return;
     }
     game.take_move();
